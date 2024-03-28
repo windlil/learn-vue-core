@@ -17,19 +17,28 @@ export function createRender(
     ) {
       if (key in element) {
         const type = typeof element[key];
-        console.dir(element, nextValue)
         if (type === "boolean" && nextValue === "") {
           element[key] = true;
         } else {
           element[key] = nextValue;
         }
       } else {
-        element.setAttribute(key, nextValue);
+        if (key === "class") {
+          element.classList.add(nextValue);
+        } else {
+          element.setAttribute(key, nextValue);
+        }
       }
+    },
+    unMount(vnode) {
+      const el: HTMLElement = vnode.el;
+      const parent = el.parentNode;
+      parent?.removeChild(el);
     },
   }
 ) {
-  const { createElement, insertElement, setElementText, patchProps } = options;
+  const { createElement, insertElement, setElementText, patchProps, unMount } =
+    options;
 
   /**
    *
@@ -38,7 +47,7 @@ export function createRender(
    */
   function mountElement(vnode, container: HTMLElement) {
     const { type, children, props } = vnode;
-    const element = createElement(type);
+    const element = (vnode.el = createElement(type));
 
     // 如果children是字符串
     if (typeof children === "string") {
@@ -50,9 +59,9 @@ export function createRender(
       });
     }
 
-    if (typeof props === 'object' && props !== null) {
+    if (typeof props === "object" && props !== null) {
       for (const k in props) {
-        patchProps(element, k, null, props[k])
+        patchProps(element, k, null, props[k]);
       }
     }
     insertElement(element, container);
@@ -65,7 +74,6 @@ export function createRender(
    * @param container
    */
   function patch(n1, n2, container) {
-    const { type, children } = n2;
     if (!n1) {
       // 挂载
       mountElement(n2, container);
@@ -78,9 +86,9 @@ export function createRender(
     if (vnode) {
       patch(container._vnode, vnode, container);
     } else if (!vnode && container._vnode) {
-      container.innerHTML = "";
+      unMount(container._vnode);
     }
-    container._node = vnode;
+    container._vnode = vnode;
   }
 
   return {

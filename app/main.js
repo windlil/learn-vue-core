@@ -16,8 +16,9 @@ const vnode = {
           type: "div",
           children: "div-div",
           props: {
-            id: "abc"
-          }
+            id: "abc",
+            class: "blue",
+          },
         },
       ],
     },

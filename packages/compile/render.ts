@@ -9,27 +9,46 @@ export function createRender(
     setElementText(element: HTMLElement, text: string) {
       element.textContent = text;
     },
+    // 处理属性
     patchProps(
       element: HTMLElement | any,
       key: string,
       prevValue: any,
       nextValue: any
     ) {
+      // 处理事件
       if (/^on/.test(key)) {
         const eventName = key.slice(2).toLocaleLowerCase();
-        let invoker = element._vei;
-        if (!invoker) {
-          invoker = element._vei = (e) => {
-            invoker.value(e);
-          };
-          invoker.value = nextValue;
-        } else {
-          invoker.value = nextValue;
+        let invokers = element._vei ?? (element._vei = {});
+        let invoker = invokers[key];
+        if (nextValue) {
+          // 如果存在新值
+          if (!invoker) {
+            // 首次挂载
+            invoker = element._vei[key] = (e: Event) => {
+              if (Array.isArray(invoker.value)) {
+                if (e.timeStamp < invoker.attached) return;
+                invoker.value.forEach((fn) => fn(e));
+              } else {
+                invoker.value(e);
+              }
+            };
+            invoker.value = nextValue;
+            invoker.attached = performance.now;
+            element.addEventListener(eventName, invoker);
+          } else {
+            // 更新
+            invoker.value = nextValue;
+          }
+        } else if (invoker) {
+          // 如果值不存在 且存在invoker 说明要卸载方法
+          (element as HTMLElement).removeEventListener(eventName, invoker);
         }
-        prevValue && document.removeEventListener(eventName, prevValue);
-        element.addEventListener(eventName, nextValue);
-      }
-      if (key in element) {
+      } else if (key === "class") {
+        // 处理class
+        element.classList.add(nextValue);
+      } else if (key in element) {
+        // 处理DOM属性
         const type = typeof element[key];
         if (type === "boolean" && nextValue === "") {
           element[key] = true;
@@ -37,11 +56,8 @@ export function createRender(
           element[key] = nextValue;
         }
       } else {
-        if (key === "class") {
-          element.classList.add(nextValue);
-        } else {
-          element.setAttribute(key, nextValue);
-        }
+        // 处理HTML属性
+        element.setAttribute(key, nextValue);
       }
     },
     unMount(vnode) {
@@ -49,10 +65,22 @@ export function createRender(
       const parent = el.parentNode;
       parent?.removeChild(el);
     },
+    /**
+     *
+     * @param n1 旧节点
+     * @param n2 新节点
+     */
+    patchElement(n1, n2) {},
   }
 ) {
-  const { createElement, insertElement, setElementText, patchProps, unMount } =
-    options;
+  const {
+    createElement,
+    insertElement,
+    setElementText,
+    patchProps,
+    unMount,
+    patchElement,
+  } = options;
 
   /**
    *
@@ -69,7 +97,11 @@ export function createRender(
     } else if (Array.isArray(children)) {
       // children是数组类型，依次创建元素，并插入到父级元素中
       children.forEach((child) => {
-        patch(null, child, element);
+        if (typeof child === "string") {
+          setElementText(element, child);
+        } else {
+          patch(null, child, element);
+        }
       });
     }
 
@@ -103,7 +135,7 @@ export function createRender(
         mountElement(n2, container);
       } else {
         // 更新 TODO
-        // patchElement(n2, container);
+        patchElement(n1, n2);
       }
     } else if (newNodeType === "object") {
       // 组件类型

@@ -10,11 +10,25 @@ export function createRender(
       element.textContent = text;
     },
     patchProps(
-      element: HTMLElement,
+      element: HTMLElement | any,
       key: string,
       prevValue: any,
       nextValue: any
     ) {
+      if (/^on/.test(key)) {
+        const eventName = key.slice(2).toLocaleLowerCase();
+        let invoker = element._vei;
+        if (!invoker) {
+          invoker = element._vei = (e) => {
+            invoker.value(e);
+          };
+          invoker.value = nextValue;
+        } else {
+          invoker.value = nextValue;
+        }
+        prevValue && document.removeEventListener(eventName, prevValue);
+        element.addEventListener(eventName, nextValue);
+      }
       if (key in element) {
         const type = typeof element[key];
         if (type === "boolean" && nextValue === "") {
@@ -74,11 +88,27 @@ export function createRender(
    * @param container
    */
   function patch(n1, n2, container) {
-    if (!n1) {
-      // 挂载
-      mountElement(n2, container);
+    // 新旧节点的类型不一致 直接卸载
+    if (n1 && n1.type !== n2.type) {
+      unMount(n1);
+      n1 = null;
+    }
+
+    const newNodeType = typeof n2.type;
+
+    // 常规标签
+    if (newNodeType === "string") {
+      if (!n1) {
+        // 挂载
+        mountElement(n2, container);
+      } else {
+        // 更新 TODO
+        // patchElement(n2, container);
+      }
+    } else if (newNodeType === "object") {
+      // 组件类型
     } else {
-      // 更新
+      // 其它类型
     }
   }
 
@@ -86,6 +116,7 @@ export function createRender(
     if (vnode) {
       patch(container._vnode, vnode, container);
     } else if (!vnode && container._vnode) {
+      // 执行卸载操作
       unMount(container._vnode);
     }
     container._vnode = vnode;

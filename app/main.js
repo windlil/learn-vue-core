@@ -8,6 +8,11 @@ const vnode = {
     {
       type: "a",
       children: "这是一个a节点",
+      props: {
+        onClick(e) {
+          console.log('点击了', e)
+        }
+      }
     },
     {
       type: "div",

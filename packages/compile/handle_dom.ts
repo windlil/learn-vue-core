@@ -1,5 +1,5 @@
 export function insertElement(
-  element: HTMLElement,
+  element: Node,
   parent: HTMLElement,
   anchor = null
 ) {
@@ -12,4 +12,12 @@ export function createElement(tag: string) {
 
 export function setElementText(element: HTMLElement, text: string) {
   element.textContent = text;
+}
+
+export function setText(element: Node, text) {
+  element.nodeValue = text
+}
+
+export function createTextNode(text) {
+  return document.createTextNode(text)
 }

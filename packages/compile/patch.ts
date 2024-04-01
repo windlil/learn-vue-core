@@ -1,12 +1,19 @@
-import { insertElement, createElement, setElementText } from "./handle_dom";
+import {
+  insertElement,
+  createElement,
+  setElementText,
+  setText,
+  createTextNode,
+} from "./handle_dom";
 import { unMount } from "./circle";
+import { Text, Fragment } from './static'
 
 /**
  * 更新属性-事件
- * @param element 
- * @param key 
- * @param prevValue 
- * @param nextValue 
+ * @param element
+ * @param key
+ * @param prevValue
+ * @param nextValue
  */
 export function patchPropsEvent(
   element: HTMLElement | any,
@@ -44,10 +51,10 @@ export function patchPropsEvent(
 
 /**
  * 更新属性-class
- * @param element 
- * @param key 
- * @param prevValue 
- * @param nextValue 
+ * @param element
+ * @param key
+ * @param prevValue
+ * @param nextValue
  */
 export function patchPropsClass(
   element: HTMLElement | any,
@@ -63,10 +70,10 @@ export function patchPropsClass(
 
 /**
  * 更新属性-DOM属性
- * @param element 
- * @param key 
- * @param prevValue 
- * @param nextValue 
+ * @param element
+ * @param key
+ * @param prevValue
+ * @param nextValue
  */
 export function patchPropsDomAttribute(
   element: HTMLElement | any,
@@ -84,10 +91,10 @@ export function patchPropsDomAttribute(
 
 /**
  * 更新属性MAIN
- * @param element 
- * @param key 
- * @param prevValue 
- * @param nextValue 
+ * @param element
+ * @param key
+ * @param prevValue
+ * @param nextValue
  */
 export function patchProps(
   element: HTMLElement | any,
@@ -103,7 +110,7 @@ export function patchProps(
     patchPropsClass(element, key, prevValue, nextValue);
   } else if (key in element) {
     // 处理DOM属性
-    patchPropsDomAttribute(element, key, prevValue, nextValue)
+    patchPropsDomAttribute(element, key, prevValue, nextValue);
   } else {
     // 处理HTML属性
     element.setAttribute(key, nextValue);
@@ -125,11 +132,7 @@ function mountElement(vnode, container: HTMLElement) {
   } else if (Array.isArray(children)) {
     // children是数组类型，依次创建元素，并插入到父级元素中
     children.forEach((child) => {
-      if (typeof child === "string") {
-        setElementText(element, child);
-      } else {
-        patch(null, child, element);
-      }
+      patch(null, child, element);
     });
   }
   if (typeof props === "object" && props !== null) {
@@ -142,9 +145,9 @@ function mountElement(vnode, container: HTMLElement) {
 
 /**
  * 更新children
- * @param n1 
- * @param n2 
- * @param element 
+ * @param n1
+ * @param n2
+ * @param element
  */
 export function patchChildren(n1, n2, element) {
   const childrenType = typeof n2.children;
@@ -156,7 +159,7 @@ export function patchChildren(n1, n2, element) {
 
 /**
  * 更新节点
- * @param n1 老节点 
+ * @param n1 老节点
  * @param n2  新节点
  */
 function patchElement(n1, n2) {
@@ -181,6 +184,39 @@ function patchElement(n1, n2) {
   patchChildren(n1, n2, element);
 }
 
+export function patchStringType(n1, n2, container) {
+  if (!n1) {
+    // 老节点不存在 挂载
+    mountElement(n2, container);
+  } else {
+    // 老节点存在 更新
+    patchElement(n1, n2);
+  }
+}
+
+export function patchText(n1, n2, container) {
+  if (!n1) {
+    // 如果老节点不存在
+    const el = (n2.el = createTextNode(n2.children));
+    insertElement(el, container);
+  } else {
+    const el = (n2.el = n1.el);
+    if (n2.children !== n1.children) {
+      setText(el, n2.children);
+    }
+  }
+}
+
+export function patchObject() {}
+
+export function patchFragment(n1, n2, container) {
+  if (!n1) {
+    (n2.children as any[]).forEach((child) => patch(null, child, container));
+  } else {
+    patchChildren(n1, n2, container);
+  }
+}
+
 /**
  *
  * @param n1 旧vnode
@@ -198,15 +234,15 @@ export function patch(n1, n2, container) {
 
   // 常规标签
   if (newNodeType === "string") {
-    if (!n1) {
-      // 老节点不存在 挂载
-      mountElement(n2, container);
-    } else {
-      // 老节点存在 更新
-      patchElement(n1, n2);
-    }
+    patchStringType(n1, n2, container);
   } else if (newNodeType === "object") {
     // 组件类型
+  } else if (n2.type === Text) {
+    // 文本类型
+    patchText(n1, n2, container);
+  } else if (n2.type === Fragment) {
+    // Fragment类型
+    patchFragment(n1, n2, container);
   } else {
     // 其它类型
   }

@@ -6,7 +6,9 @@ import {
   createTextNode,
 } from "./handle_dom";
 import { unMount } from "./circle";
-import { Text, Fragment } from './static'
+import { Text, Fragment } from "./static";
+import { VNode } from "./type.d";
+import { patchChildrenUseEasyDiff } from "./diff";
 
 /**
  * 更新属性-事件
@@ -144,6 +146,35 @@ function mountElement(vnode, container: HTMLElement) {
 }
 
 /**
+ * 在没有提供key的情况下 进行更新
+ * @param n1
+ * @param n2
+ * @param element
+ */
+function patchChildrenWithNoKey(n1: VNode, n2: VNode, element: Node) {
+  const oldChildren = n1.children;
+  const newChildren = n2.children;
+  const oldChildrenLength = oldChildren.length;
+  const newChildrenLength = newChildren.length;
+  const commonLength = Math.min(oldChildrenLength, newChildrenLength);
+  for (let i = 0; i < commonLength; i++) {
+    patch(oldChildren[i], newChildren[i], element);
+  }
+  // 说明要新增
+  if (newChildrenLength > commonLength) {
+    for (let i = commonLength; i < newChildrenLength; i++) {
+      patch(null, newChildren[i], element);
+    }
+  }
+  // 旧节点要被删除
+  if (oldChildrenLength > commonLength) {
+    for (let i = commonLength; i < oldChildrenLength; i++) {
+      unMount(oldChildren[i]);
+    }
+  }
+}
+
+/**
  * 更新children
  * @param n1
  * @param n2
@@ -154,6 +185,7 @@ export function patchChildren(n1, n2, element) {
   if (childrenType === "string") {
     setElementText(element, n2.children);
   } else if (Array.isArray(n2.children)) {
+    patchChildrenUseEasyDiff(n1, n2, element);
   }
 }
 
@@ -167,7 +199,6 @@ function patchElement(n1, n2) {
   const newProps = n2.props;
   const oldProps = n1.props;
 
-  console.log(newProps, oldProps);
   //先更新属性
   for (const k in newProps) {
     if (newProps[k] !== oldProps[k]) {
@@ -197,6 +228,7 @@ export function patchStringType(n1, n2, container) {
 export function patchText(n1, n2, container) {
   if (!n1) {
     // 如果老节点不存在
+
     const el = (n2.el = createTextNode(n2.children));
     insertElement(el, container);
   } else {
@@ -223,7 +255,7 @@ export function patchFragment(n1, n2, container) {
  * @param n2 新vnode
  * @param container
  */
-export function patch(n1, n2, container) {
+export function patch(n1: VNode | null, n2: VNode, container) {
   // 新旧节点的类型不一致 直接卸载
   if (n1 && n1.type !== n2.type) {
     unMount(n1);
@@ -231,7 +263,6 @@ export function patch(n1, n2, container) {
   }
 
   const newNodeType = typeof n2.type;
-
   // 常规标签
   if (newNodeType === "string") {
     patchStringType(n1, n2, container);

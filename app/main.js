@@ -1,9 +1,10 @@
-import { createRender, reactive, effect } from "../dist/mini-vue.esm.js";
+import { createRender, reactive, effect, Text } from "../dist/mini-vue.esm.js";
 
 const { render } = createRender();
 
 const a = reactive({
   count: true,
+  b: 0,
 });
 
 effect(() => {
@@ -17,13 +18,16 @@ effect(() => {
           class: "red",
         },
     children: [
-      "div",
+      {
+        type: Text,
+        children: `${a.b}`,
+      },
       {
         type: "button",
         props: {
           onClick() {
             a.count = !a.count;
-            console.log(a.count);
+            a.b++;
           },
         },
         children: "button",

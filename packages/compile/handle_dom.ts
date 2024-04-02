@@ -1,8 +1,9 @@
 export function insertElement(
   element: Node,
-  parent: HTMLElement,
-  anchor = null
+  parent: Node,
+  anchor?: Node | null
 ) {
+  if (!anchor) anchor = null
   parent.insertBefore(element, anchor);
 }
 

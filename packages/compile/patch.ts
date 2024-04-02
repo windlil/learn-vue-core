@@ -124,7 +124,7 @@ export function patchProps(
  * @param vnode 待挂载
  * @param container 被挂载
  */
-function mountElement(vnode, container: HTMLElement) {
+function mountElement(vnode, container: HTMLElement, anchor?: Node) {
   const { type, children, props } = vnode;
   const element = (vnode.el = createElement(type));
 
@@ -142,7 +142,7 @@ function mountElement(vnode, container: HTMLElement) {
       patchProps(element, k, null, props[k]);
     }
   }
-  insertElement(element, container);
+  insertElement(element, container, anchor);
 }
 
 /**
@@ -215,10 +215,10 @@ function patchElement(n1, n2) {
   patchChildren(n1, n2, element);
 }
 
-export function patchStringType(n1, n2, container) {
+export function patchStringType(n1, n2, container, anchor?: Node) {
   if (!n1) {
     // 老节点不存在 挂载
-    mountElement(n2, container);
+    mountElement(n2, container, anchor);
   } else {
     // 老节点存在 更新
     patchElement(n1, n2);
@@ -255,7 +255,7 @@ export function patchFragment(n1, n2, container) {
  * @param n2 新vnode
  * @param container
  */
-export function patch(n1: VNode | null, n2: VNode, container) {
+export function patch(n1: VNode | null, n2: VNode, container, anchor?: Node) {
   // 新旧节点的类型不一致 直接卸载
   if (n1 && n1.type !== n2.type) {
     unMount(n1);
@@ -265,7 +265,7 @@ export function patch(n1: VNode | null, n2: VNode, container) {
   const newNodeType = typeof n2.type;
   // 常规标签
   if (newNodeType === "string") {
-    patchStringType(n1, n2, container);
+    patchStringType(n1, n2, container, anchor);
   } else if (newNodeType === "object") {
     // 组件类型
   } else if (n2.type === Text) {

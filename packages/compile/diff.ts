@@ -77,7 +77,11 @@ export function patchChildrenUseDoubleDiff(
   let newEndNode = newChildren[newEndIndex];
 
   while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
-    if (oldStartNode.key === newStartNode.key) {
+    if (!oldStartNode) {
+      oldStartNode = oldChildren[++oldStartIndex];
+    } else if (!oldEndNode) {
+      oldEndNode = oldChildren[--oldEndIndex];
+    } else if (oldStartNode.key === newStartNode.key) {
       // 旧节点队头key === 新节点队头key
       patch(newStartNode, oldStartNode, container);
       newStartNode = newChildren[++newStartIndex];
@@ -99,6 +103,39 @@ export function patchChildrenUseDoubleDiff(
       insertElement(oldEndNode.el, container, oldStartNode.el);
       oldEndNode = oldChildren[--oldEndIndex];
       newStartNode = newChildren[++newStartIndex];
+    } else {
+      // 第一轮比较都不符合复用
+      // 寻找新节点队头在老节点中的索引
+      let newStartNodeInOldNodeIndex = oldChildren.findIndex(
+        (child) => child.key === newStartNode.key
+      );
+      if (newStartIndex !== -1) {
+        // 如果新节点队头在老节点中存在 将老节点对应的节点插入队头
+        patch(oldChildren[newStartNodeInOldNodeIndex], newStartNode, container);
+        insertElement(
+          oldChildren[newStartNodeInOldNodeIndex].el,
+          container,
+          oldStartNode.el
+        );
+        (oldChildren[newStartNodeInOldNodeIndex] as any) = undefined;
+      } else {
+        // 新节点队头在老节点中不存在 说明新增
+        patch(null, newStartNode, container, oldStartNode.el);
+      }
+      newStartNode = newChildren[++newStartIndex];
+    }
+  }
+
+  if (oldStartIndex > oldEndIndex && newStartIndex <= newEndIndex) {
+    // 说明新节点列表还有节点未被处理
+    for (let i = newStartIndex; i <= newEndIndex; i++) {
+      patch(null, newChildren[i], container, oldStartNode.el);
+    }
+  } else if (newStartIndex > newEndIndex && oldStartIndex <= oldEndIndex) {
+    for (let i = oldStartIndex; i <= oldEndIndex; i++) {
+      if (oldChildren[i]) {
+        unMount(oldChildren[i]);
+      }
     }
   }
 }

@@ -7,6 +7,18 @@ const a = reactive({
   b: 0,
 });
 
+const AComponent = {
+  data:() => ({
+    message: 'mini-vue'
+  }),
+  render() {
+    return {
+      type: 'div',
+      children: `hello ${this.message}`
+    }
+  }
+}
+
 effect(() => {
   const vnode = {
     type: "div",
@@ -21,17 +33,21 @@ effect(() => {
       {
         type: Text,
         children: `${a.b}`,
+        key: 0
       },
       {
         type: "button",
         props: {
           onClick() {
-            a.count = !a.count;
             a.b++;
           },
         },
         children: "button",
+        key: 1
       },
+      {
+        type: AComponent
+      }
     ],
   };
   render(vnode, document.querySelector("#app"));
